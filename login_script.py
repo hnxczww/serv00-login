@@ -36,6 +36,8 @@ async def login_and_run_script(username, password, panel):
         url = f'https://{panel}/login/?next=/'
         await page.goto(url)
 
+        # 等待页面加载
+        await page.waitForSelector('#id_username')
         username_input = await page.querySelector('#id_username')
         if username_input:
             await page.evaluate('''(input) => input.value = ""''', username_input)
@@ -50,7 +52,9 @@ async def login_and_run_script(username, password, panel):
             raise Exception('无法找到登录按钮')
 
         await page.waitForNavigation()
-
+        
+        # 等待登录完成并验证
+        await page.waitForSelector('a[href="/logout/"]')
         is_logged_in = await page.evaluate('''() => {
             const logoutButton = document.querySelector('a[href="/logout/"]');
             return logoutButton !== null;
@@ -58,9 +62,9 @@ async def login_and_run_script(username, password, panel):
 
         if is_logged_in:
             print(f'{serviceName}账号 {username} 登录成功')
-            # 进入执行脚本的页面
-            # 请根据具体情况调整选择器和执行脚本的逻辑
-            script_button = await page.querySelector('button.execute-script')  # 假设有一个按钮用来执行脚本
+            # 确保脚本执行按钮存在
+            await page.waitForSelector('button.execute-script', timeout=60000)  # 60秒超时
+            script_button = await page.querySelector('button.execute-script')  # 请根据实际情况调整选择器
             if script_button:
                 await script_button.click()
                 # 等待脚本执行完成的反馈
