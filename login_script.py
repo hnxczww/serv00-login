@@ -1,12 +1,29 @@
+import subprocess
+import sys
+
+
+def install(package):
+    """安装指定的 Python 包"""
+    subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+
+
+# 检查并安装 asyncssh 模块
+try:
+    import asyncssh
+except ImportError:
+    print("未安装 asyncssh，正在安装...")
+    install('asyncssh')
+
 import asyncio
 import asyncssh
+
 
 async def execute_command(client, command):
     """执行命令并打印返回数据"""
     print(f"执行命令: {command}")
     async with client.create_process(command) as proc:
         stdout, stderr = await proc.communicate()
-        
+
         # 打印命令的标准输出
         print("标准输出：")
         print(stdout.decode().strip())
@@ -20,6 +37,7 @@ async def execute_command(client, command):
         exit_status = proc.returncode
         print(f"退出状态码: {exit_status}")
         print("-" * 40)  # 分隔符
+
 
 async def process_server(server):
     """处理单个服务器的连接和命令执行"""
@@ -51,6 +69,7 @@ async def process_server(server):
         print(f"准备执行脚本: {script_path}")
         await execute_command(client, f"bash {script_path}")
 
+
 async def main():
     servers = [
         {"username": "hnxpzjww", "password": "Hnxczww86", "panel": "panel8.serv00.com"},
@@ -62,6 +81,7 @@ async def main():
 
     tasks = [process_server(server) for server in servers]
     await asyncio.gather(*tasks)  # 并发执行所有服务器任务
+
 
 if __name__ == "__main__":
     asyncio.run(main())
