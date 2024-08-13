@@ -4,9 +4,9 @@ from pyppeteer import launch
 from datetime import datetime, timedelta
 import aiofiles
 import random
-import requests
-import os
 import subprocess
+import os
+import requests
 
 # 从环境变量中获取 Telegram Bot Token 和 Chat ID
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
@@ -27,7 +27,7 @@ message = 'serv00&ct8自动化脚本运行\n'
 async def login(username, password, panel):
     global browser
 
-    page = None
+    page = None  # 确保 page 在任何情况下都被定义
     serviceName = 'ct8' if 'ct8' in panel else 'serv00'
     try:
         if not browser:
@@ -67,22 +67,17 @@ async def login(username, password, panel):
         if page:
             await page.close()
 
-def execute_script(script_path):
-    try:
-        result = subprocess.run([script_path], check=True, text=True, capture_output=True)
-        print(f"脚本 {script_path} 执行成功，输出：{result.stdout}")
-    except subprocess.CalledProcessError as e:
-        print(f"脚本 {script_path} 执行失败，错误：{e.stderr}")
-
-async def update_crontab(commands):
-    for command in commands:
-        try:
-            result = subprocess.run(command, shell=True, check=True, text=True, capture_output=True)
-            print(f"命令 '{command}' 执行成功，输出：{result.stdout}")
-        except subprocess.CalledProcessError as e:
-            print(f"命令 '{command}' 执行失败，错误：{e.stderr}")
-        # 等待 5 秒
-        await asyncio.sleep(5)
+async def execute_command(command):
+    process = await asyncio.create_subprocess_shell(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
+    )
+    stdout, stderr = await process.communicate()
+    if process.returncode == 0:
+        print(f"命令 '{command}' 执行成功，输出：{stdout.decode()}")
+    else:
+        print(f"命令 '{command}' 执行失败，错误：{stderr.decode()}")
 
 async def main():
     global message
@@ -110,27 +105,23 @@ async def main():
             success_message = f'{serviceName}账号 {username} 于北京时间 {now_beijing}（UTC时间 {now_utc}）登录成功！'
             message += success_message + '\n'
             print(success_message)
-
-            # 执行 cron 命令
-            cron_commands = [
-                '(crontab -l; echo "@reboot pkill -kill -u ${USER} && nohup /home/${USER}/.s5/s5 -c /home/${USER}/.s5/config.json >/dev/null 2>&1 & && nohup /home/${USER}/.nezha-agent/start.sh >/dev/null 2>&1 &") | crontab -',
-                '(crontab -l; echo "*/12 * * * * pgrep -x \\"nezha-agent\\" > /dev/null || nohup /home/${USER}/.nezha-agent/start.sh >/dev/null 2>&1 &") | crontab -'
-            ]
-            await update_crontab(cron_commands)
-
-            # 等待 5 秒
-            await asyncio.sleep(5)
-
-            # 执行脚本
-            script_path = './gaojilingjuli.sh'
-            execute_script(script_path)
-
         else:
             message += f'{serviceName}账号 {username} 登录失败，请检查{serviceName}账号和密码是否正确。\n'
             print(f'{serviceName}账号 {username} 登录失败，请检查{serviceName}账号和密码是否正确。')
 
-        delay = random.randint(1000, 8000)
-        await delay_time(delay)
+        cron_commands = [
+            '(crontab -l; echo "@reboot pkill -kill -u ${USER} && nohup /home/${USER}/.s5/s5 -c /home/${USER}/.s5/config.json >/dev/null 2>&1 & && nohup /home/${USER}/.nezha-agent/start.sh >/dev/null 2>&1 &") | crontab -',
+            '(crontab -l; echo "*/12 * * * * pgrep -x \\"nezha-agent\\" > /dev/null || nohup /home/${USER}/.nezha-agent/start.sh >/dev/null 2>&1 &") | crontab -'
+        ]
+
+        for command in cron_commands:
+            await execute_command(command)
+            await asyncio.sleep(5)
+
+        # 执行脚本
+        script_path = './gaojilingjuli.sh'
+        await execute_command(f'bash {script_path}')
+        await asyncio.sleep(5)
         
     message += f'所有{serviceName}账号登录完成！'
     await send_telegram_message(message)
@@ -155,11 +146,14 @@ async def send_telegram_message(message):
     headers = {
         'Content-Type': 'application/json'
     }
-    response = requests.post(url, json=payload, headers=headers)
-    if response.status_code == 200:
-        print("消息发送成功")
-    else:
-        print(f"消息发送失败，状态码：{response.status_code}")
+    try:
+        response = requests.post(url, json=payload, headers=headers)
+        if response.status_code == 200:
+            print("消息发送成功")
+        else:
+            print(f"消息发送失败，状态码：{response.status_code}")
+    except Exception as e:
+        print(f"发送消息到Telegram时出错: {e}")
 
 # 运行主函数
 if __name__ == "__main__":
