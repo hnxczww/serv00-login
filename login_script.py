@@ -4,10 +4,9 @@ from pyppeteer import launch
 from datetime import datetime, timedelta
 import aiofiles
 import random
-import requests
-import os
 import subprocess
-import tempfile
+import os
+import requests
 
 # 从环境变量中获取 Telegram Bot Token 和 Chat ID
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
@@ -26,16 +25,12 @@ browser = None
 message = 'serv00&ct8自动化脚本运行\n'
 
 async def execute_command(command):
-    process = await asyncio.create_subprocess_shell(
-        command,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE
-    )
-    stdout, stderr = await process.communicate()
-    if process.returncode != 0:
-        print(f"命令执行失败: {stderr.decode()}")
+    # 执行命令
+    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+    if result.returncode != 0:
+        print(f"命令执行失败: {result.stderr}")
     else:
-        print(f"命令执行成功: {stdout.decode()}")
+        print(f"命令执行成功: {result.stdout}")
 
     # 添加回车
     print("")  # 输出一个空行作为回车
@@ -164,4 +159,3 @@ async def send_telegram_message(message):
 
 if __name__ == '__main__':
     asyncio.run(main())
- 等下告诉你
