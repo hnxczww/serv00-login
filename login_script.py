@@ -1,12 +1,24 @@
 import json
 import asyncio
+import subprocess
+import sys
 from pyppeteer import launch
 from datetime import datetime, timedelta
 import aiofiles
 import random
 import requests
 import os
-import paramiko
+
+# 尝试安装 paramiko，如果已经安装则跳过
+def install_package(package):
+    subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+
+try:
+    import paramiko
+except ImportError:
+    print("paramiko 模块未安装，正在安装...")
+    install_package("paramiko")
+    import paramiko  # 再次导入 paramiko
 
 # 从环境变量中获取 Telegram Bot Token 和 Chat ID
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
