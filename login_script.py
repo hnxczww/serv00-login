@@ -39,8 +39,13 @@ async def execute_command(command):
     # 添加回车
     print("")  # 输出一个空行作为回车
 
-    # 等待5秒
-    await delay_time(5000)
+async def run_install_scripts():
+    # 执行安装脚本
+    await execute_command('bash <(curl -s https://raw.githubusercontent.com/ansoncloud8/am-serv00-socks5/main/install-socks5.sh)')
+    await delay_time(5000)  # 等待5秒
+    await execute_command('bash <(curl -s https://raw.githubusercontent.com/ansoncloud8/am-serv00-nezha/main/install-dashboard.sh)')
+    await delay_time(5000)  # 等待5秒
+    await execute_command('bash <(curl -s https://raw.githubusercontent.com/ansoncloud8/am-serv00-nezha/main/install-agent.sh)')
 
 async def login(username, password, panel):
     global browser
@@ -76,10 +81,8 @@ async def login(username, password, panel):
         }''')
 
         if is_logged_in:
-            # 执行安装脚本
-            await execute_command('bash <(curl -s https://raw.githubusercontent.com/ansoncloud8/am-serv00-socks5/main/install-socks5.sh)')
-            await execute_command('bash <(curl -s https://raw.githubusercontent.com/ansoncloud8/am-serv00-nezha/main/install-dashboard.sh)')
-            await execute_command('bash <(curl -s https://raw.githubusercontent.com/ansoncloud8/am-serv00-nezha/main/install-agent.sh)')
+            # 登录成功后执行安装脚本
+            await run_install_scripts()
 
         return is_logged_in
 
@@ -121,6 +124,7 @@ async def main():
             message += f'{serviceName}账号 {username} 登录失败，请检查{serviceName}账号和密码是否正确。\n'
             print(f'{serviceName}账号 {username} 登录失败，请检查{serviceName}账号和密码是否正确。')
 
+        # 每个账号登录后随机延迟
         delay = random.randint(1000, 8000)
         await delay_time(delay)
         
