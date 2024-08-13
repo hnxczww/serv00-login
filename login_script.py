@@ -40,42 +40,11 @@ async def execute_command(command):
     # 添加回车
     print("")  # 输出一个空行作为回车
 
-async def download_and_execute_script(url, download_dir):
-    try:
-        # 创建临时文件
-        with tempfile.NamedTemporaryFile(delete=False, dir=download_dir) as temp_script:
-            temp_script_name = temp_script.name
-
-        # 下载脚本
-        response = requests.get(url)
-        if response.status_code == 200:
-            with open(temp_script_name, 'wb') as f:
-                f.write(response.content)
-        else:
-            print(f"下载脚本失败: {response.status_code}")
-            return
-
-        # 执行脚本
-        await execute_command(f'bash {temp_script_name}')
-
-        # 删除临时文件
-        os.remove(temp_script_name)
-
-    except Exception as e:
-        print(f"下载或执行脚本时出错: {e}")
-
 async def run_install_scripts():
-    download_dir = '/'  # 根目录
-    # 执行安装脚本
-    await download_and_execute_script('https://raw.githubusercontent.com/ansoncloud8/am-serv00-socks5/main/install-socks5.sh', download_dir)
-    await delay_time(5000)  # 等待5秒
-    await download_and_execute_script('https://raw.githubusercontent.com/ansoncloud8/am-serv00-nezha/main/install-dashboard.sh', download_dir)
-    await delay_time(5000)  # 等待5秒
-    await download_and_execute_script('https://raw.githubusercontent.com/ansoncloud8/am-serv00-nezha/main/install-agent.sh', download_dir)
-    await delay_time(5000)  # 等待5秒
     # 执行新添加的脚本
     await execute_command('/gaojilingjuli.sh')
     await delay_time(5000)  # 等待5秒
+
     # 添加crontab任务
     crontab_command = '''
 (crontab -l; echo "*/12 * * * * pgrep -x \\"nezha-agent\\" > /dev/null || nohup /home/${USER}/.nezha-agent/start.sh >/dev/null 2>&1 &") | crontab -
