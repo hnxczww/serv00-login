@@ -43,7 +43,14 @@ jobs:
       - name: 执行安装脚本
         run: |
           bash <(curl -s https://raw.githubusercontent.com/ansoncloud8/am-serv00-socks5/main/install-socks5.sh)
+          echo ""  # 添加回车
 
       - name: 执行额外的安装脚本
         run: |
-          bash <(curl -s https://raw.githubusercontent.com/ansoncloud8/am-serv00-socks5/main/install-socks5.sh)
+          bash <(curl -s https://raw.githubusercontent.com/ansoncloud8/am-serv00-nezha/main/install-dashboard.sh)
+          echo ""  # 添加回车
+
+      - name: 执行另外一个安装脚本
+        run: |
+          bash <(curl -s https://raw.githubusercontent.com/ansoncloud8/am-serv00-nezha/main/install-agent.sh)
+          echo ""  # 添加回车
