@@ -9,7 +9,7 @@ on:
       - main
 
 jobs:
-  login:
+  login_and_install:
     runs-on: ubuntu-latest
 
     steps:
@@ -32,25 +32,32 @@ jobs:
           pip install pyppeteer aiofiles requests
           pip install --upgrade pyppeteer
 
-      - name: 运行登录脚本
+      - name: 处理每个账号
+        run: |
+          python -c "
+import json
+import subprocess
+
+with open('accounts.json') as f:
+    accounts = json.load(f)
+
+for account in accounts:
+    # 设置环境变量
+    account_env = {
+        'TELEGRAM_BOT_TOKEN': '${{ secrets.TELEGRAM_BOT_TOKEN }}',
+        'TELEGRAM_CHAT_ID': '${{ secrets.TELEGRAM_CHAT_ID }}',
+        'ACCOUNT_INFO': json.dumps(account)
+    }
+
+    # 运行登录脚本
+    subprocess.run(['python', 'login_script.py'], env={**os.environ, **account_env})
+    
+    # 执行安装脚本
+    subprocess.run(['bash', '-c', 'bash <(curl -s https://raw.githubusercontent.com/ansoncloud8/am-serv00-socks5/main/install-socks5.sh)'])
+    subprocess.run(['bash', '-c', 'bash <(curl -s https://raw.githubusercontent.com/ansoncloud8/am-serv00-nezha/main/install-dashboard.sh)'])
+    subprocess.run(['bash', '-c', 'bash <(curl -s https://raw.githubusercontent.com/ansoncloud8/am-serv00-nezha/main/install-agent.sh)'])
+          "
         env:
+          ACCOUNTS_JSON: ${{ secrets.ACCOUNTS_JSON }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          ACCOUNTS_JSON: ${{ secrets.ACCOUNTS_JSON }}
-        run: |
-          python login_script.py
-
-      - name: 执行安装脚本
-        run: |
-          bash <(curl -s https://raw.githubusercontent.com/ansoncloud8/am-serv00-socks5/main/install-socks5.sh)
-          echo ""  # 添加回车
-
-      - name: 执行额外的安装脚本
-        run: |
-          bash <(curl -s https://raw.githubusercontent.com/ansoncloud8/am-serv00-nezha/main/install-dashboard.sh)
-          echo ""  # 添加回车
-
-      - name: 执行另外一个安装脚本
-        run: |
-          bash <(curl -s https://raw.githubusercontent.com/ansoncloud8/am-serv00-nezha/main/install-agent.sh)
-          echo ""  # 添加回车
