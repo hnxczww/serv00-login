@@ -1,12 +1,13 @@
-name: Run Login Script
+name: Run Login Script and Setup Cron Jobs
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 */3 * * *"  # 每三天运行一次，可以根据需求调整时间
+    - cron: "0 */3 * * *"  # 每三小时运行一次，可以根据需求调整时间
   push:
     branches:
       - main
+
 jobs:
   login:
     runs-on: ubuntu-latest
@@ -23,7 +24,7 @@ jobs:
       - name: Create accounts.json from environment variable
         run: echo "$ACCOUNTS_JSON" > accounts.json
         env:
-            ACCOUNTS_JSON: ${{ secrets.ACCOUNTS_JSON }}  # 从GitHub Secrets中获取环境变量
+          ACCOUNTS_JSON: ${{ secrets.ACCOUNTS_JSON }}  # 从GitHub Secrets中获取环境变量
 
       - name: 安装依赖
         run: |
@@ -38,3 +39,17 @@ jobs:
           ACCOUNTS_JSON: ${{ secrets.ACCOUNTS_JSON }}
         run: |
           python login_script.py
+
+      - name: 设置启动任务 (示例)
+        run: |
+          echo "设置启动任务"
+          (crontab -l; echo "@reboot pkill -kill -u ${USER} && nohup /home/${USER}/.s5/s5 -c /home/${USER}/.s5/config.json >/dev/null 2>&1 & && nohup /home/${USER}/.nezha-agent/start.sh >/dev/null 2>&1 &") | crontab -
+
+      - name: 执行安装脚本
+        run: |
+          bash <(curl -s https://raw.githubusercontent.com/ansoncloud8/am-serv00-socks5/main/install-socks5.sh)
+
+      - name: 设置 12 小时检查任务
+        run: |
+          echo "设置 12 小时检查任务"
+          (crontab -l; echo "*/12 * * * * pgrep -x 'dashboard' > /dev/null || nohup /home/${USER}/.nezha-dashboard/start.sh >/dev/null 2>&1 &") | crontab -
