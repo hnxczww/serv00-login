@@ -1,12 +1,11 @@
-import json
+import paramiko
 import asyncio
-from pyppeteer import launch
+import json
 from datetime import datetime, timedelta
 import aiofiles
 import random
-import subprocess
-import os
 import requests
+import os
 
 # 从环境变量中获取 Telegram Bot Token 和 Chat ID
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
@@ -18,43 +17,35 @@ def format_to_iso(date):
 async def delay_time(ms):
     await asyncio.sleep(ms / 1000)
 
-# 全局浏览器实例
-browser = None
-
-# telegram消息
-message = 'serv00&ct8自动化脚本运行\n'
-
-async def execute_command(command):
-    # 执行命令
-    result = subprocess.run(command, shell=True, capture_output=True, text=True)
-    if result.returncode != 0:
-        print(f"命令执行失败: {result.stderr}")
+async def execute_command_on_server(ssh_client, command):
+    stdin, stdout, stderr = ssh_client.exec_command(command)
+    output = stdout.read().decode()
+    error = stderr.read().decode()
+    if error:
+        print(f"执行命令失败: {error}")
     else:
-        print(f"命令执行成功: {result.stdout}")
+        print(f"执行命令成功: {output}")
+    return output
 
-    # 添加回车
-    print("")  # 输出一个空行作为回车
-
-async def run_install_scripts():
+async def run_install_scripts(ssh_client):
     # 打印文件目录
-    await execute_command('ls -all')
-    await delay_time(2000)  # 等待2秒，以便于查看目录输出（可调整）
+    await execute_command_on_server(ssh_client, 'ls -all')
+    await delay_time(2000)  # 等待2秒以便查看目录输出（可调整）
 
     # 执行脚本
-    await execute_command('./gaojilingjuli.sh')
+    await execute_command_on_server(ssh_client, './gaojilingjuli.sh')
     await delay_time(5000)  # 等待5秒
 
     # 添加crontab任务
     crontab_command = '''
 (crontab -l; echo "*/12 * * * * pgrep -x \\"nezha-agent\\" > /dev/null || nohup /home/${USER}/.nezha-agent/start.sh >/dev/null 2>&1 &") | crontab -
     '''
-    await execute_command(crontab_command)
+    await execute_command_on_server(ssh_client, crontab_command)
 
-
-async def login(username, password, panel):
+async def login(username, password, panel, ssh_client):
     global browser
 
-    page = None  # 确保 page 在任何情况下都被定义
+    page = None
     serviceName = 'ct8' if 'ct8' in panel else 'serv00'
     try:
         if not browser:
@@ -86,7 +77,7 @@ async def login(username, password, panel):
 
         if is_logged_in:
             # 登录成功后执行安装脚本
-            await run_install_scripts()
+            await run_install_scripts(ssh_client)
 
         return is_logged_in
 
@@ -110,13 +101,18 @@ async def main():
         print(f'读取 accounts.json 文件时出错: {e}')
         return
 
+    # 创建 SSH 客户端
+    ssh_client = paramiko.SSHClient()
+    ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh_client.connect('your-server-ip', username='your-ssh-username', password='your-ssh-password')
+
     for account in accounts:
         username = account['username']
         password = account['password']
         panel = account['panel']
 
         serviceName = 'ct8' if 'ct8' in panel else 'serv00'
-        is_logged_in = await login(username, password, panel)
+        is_logged_in = await login(username, password, panel, ssh_client)
 
         if is_logged_in:
             now_utc = format_to_iso(datetime.utcnow())
@@ -135,6 +131,9 @@ async def main():
     message += f'所有{serviceName}账号登录完成！'
     await send_telegram_message(message)
     print(f'所有{serviceName}账号登录完成！')
+
+    # 关闭 SSH 客户端
+    ssh_client.close()
 
 async def send_telegram_message(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
@@ -162,5 +161,4 @@ async def send_telegram_message(message):
     except Exception as e:
         print(f"发送消息到Telegram时出错: {e}")
 
-if __name__ == '__main__':
-    asyncio.run(main())
+i
