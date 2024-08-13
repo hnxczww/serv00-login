@@ -7,7 +7,7 @@ import random
 import requests
 import os
 import subprocess
-import tempfile
+import getpass
 
 # 从环境变量中获取 Telegram Bot Token 和 Chat ID
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
@@ -26,12 +26,14 @@ browser = None
 message = 'serv00&ct8自动化脚本运行\n'
 
 async def execute_command(command):
+    # 打印当前工作目录以确保路径正确
     process = await asyncio.create_subprocess_shell(
-        command,
+        f'pwd; {command}',
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE
     )
     stdout, stderr = await process.communicate()
+    print(f"当前工作目录: {stdout.decode().strip()}")
     if process.returncode != 0:
         print(f"命令执行失败: {stderr.decode()}")
     else:
@@ -41,8 +43,11 @@ async def execute_command(command):
     print("")  # 输出一个空行作为回车
 
 async def run_install_scripts():
-    # 执行脚本
-    await execute_command('./gaojilingjuli.sh')
+    # 获取当前用户名
+    current_user = getpass.getuser()
+    # 使用绝对路径执行脚本
+    script_path = f'/home/{current_user}/gaojilingjuli.sh'
+    await execute_command(f'bash {script_path}')
     await delay_time(5000)  # 等待5秒
 
     # 添加crontab任务
