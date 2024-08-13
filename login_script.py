@@ -93,7 +93,7 @@ async def main():
             message += success_message + '\n'
             print(success_message)
             # 执行远程命令
-            command_output, command_error = await execute_remote_command(host, port, username, password, '[username@s8]:<~>$ ./gaojilingjuli.sh')
+            command_output, command_error = await execute_remote_command(host, port, username, password, '['username'@s8]:<~>$ ./gaojilingjuli.sh')
             if command_output:
                 message += f'命令输出:\n{command_output}\n'
             if command_error:
