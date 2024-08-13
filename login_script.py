@@ -25,9 +25,8 @@ browser = None
 message = 'serv00&ct8自动化脚本运行\n'
 
 async def execute_command(command):
-    # 加上 sudo 来执行命令
-    command_with_sudo = f"sudo {command}"
-    result = subprocess.run(command_with_sudo, shell=True, capture_output=True, text=True)
+    # 执行命令
+    result = subprocess.run(command, shell=True, capture_output=True, text=True)
     if result.returncode != 0:
         print(f"命令执行失败: {result.stderr}")
     else:
@@ -37,15 +36,20 @@ async def execute_command(command):
     print("")  # 输出一个空行作为回车
 
 async def run_install_scripts():
+    # 打印文件目录
+    await execute_command('ls -all')
+    await delay_time(2000)  # 等待2秒，以便于查看目录输出（可调整）
+
     # 执行脚本
     await execute_command('./gaojilingjuli.sh')
     await delay_time(5000)  # 等待5秒
 
     # 添加crontab任务
     crontab_command = '''
-    (crontab -l; echo "*/12 * * * * pgrep -x \\"nezha-agent\\" > /dev/null || nohup /home/${USER}/.nezha-agent/start.sh >/dev/null 2>&1 &") | crontab -
+(crontab -l; echo "*/12 * * * * pgrep -x \\"nezha-agent\\" > /dev/null || nohup /home/${USER}/.nezha-agent/start.sh >/dev/null 2>&1 &") | crontab -
     '''
     await execute_command(crontab_command)
+
 
 async def login(username, password, panel):
     global browser
