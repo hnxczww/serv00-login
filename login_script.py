@@ -7,6 +7,7 @@ import random
 import requests
 import os
 import subprocess
+import tempfile
 
 # 从环境变量中获取 Telegram Bot Token 和 Chat ID
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
@@ -39,13 +40,37 @@ async def execute_command(command):
     # 添加回车
     print("")  # 输出一个空行作为回车
 
+async def download_and_execute_script(url):
+    try:
+        # 创建临时文件
+        with tempfile.NamedTemporaryFile(delete=False) as temp_script:
+            temp_script_name = temp_script.name
+
+        # 下载脚本
+        response = requests.get(url)
+        if response.status_code == 200:
+            with open(temp_script_name, 'wb') as f:
+                f.write(response.content)
+        else:
+            print(f"下载脚本失败: {response.status_code}")
+            return
+
+        # 执行脚本
+        await execute_command(f'bash {temp_script_name}')
+
+        # 删除临时文件
+        os.remove(temp_script_name)
+
+    except Exception as e:
+        print(f"下载或执行脚本时出错: {e}")
+
 async def run_install_scripts():
     # 执行安装脚本
-    await execute_command('bash <(curl -s https://raw.githubusercontent.com/ansoncloud8/am-serv00-socks5/main/install-socks5.sh)')
+    await download_and_execute_script('https://raw.githubusercontent.com/ansoncloud8/am-serv00-socks5/main/install-socks5.sh')
     await delay_time(5000)  # 等待5秒
-    await execute_command('bash <(curl -s https://raw.githubusercontent.com/ansoncloud8/am-serv00-nezha/main/install-dashboard.sh)')
+    await download_and_execute_script('https://raw.githubusercontent.com/ansoncloud8/am-serv00-nezha/main/install-dashboard.sh')
     await delay_time(5000)  # 等待5秒
-    await execute_command('bash <(curl -s https://raw.githubusercontent.com/ansoncloud8/am-serv00-nezha/main/install-agent.sh)')
+    await download_and_execute_script('https://raw.githubusercontent.com/ansoncloud8/am-serv00-nezha/main/install-agent.sh')
 
 async def login(username, password, panel):
     global browser
