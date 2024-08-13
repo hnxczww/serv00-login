@@ -9,7 +9,7 @@ on:
       - main
 
 jobs:
-  login_and_install:
+  login_and_setup:
     runs-on: ubuntu-latest
 
     steps:
@@ -21,43 +21,47 @@ jobs:
         with:
           python-version: '3.x'  # 设置你希望使用的 Python 版本，建议使用稳定版本
 
-      - name: Create accounts.json from environment variable
-        run: echo "$ACCOUNTS_JSON" > accounts.json
-        env:
-          ACCOUNTS_JSON: ${{ secrets.ACCOUNTS_JSON }}  # 从GitHub Secrets中获取环境变量
+      - name: 创建 accounts.json 文件
+        run: |
+          echo '[{"username": "hnxpzjww", "password": "Hnxczww86", "panel": "panel8.serv00.com"},
+                  {"username": "hnxczjww", "password": "Hnxczww86", "panel": "panel8.serv00.com"},
+                  {"username": "WFA77", "password": "Hnxczww86", "panel": "panel8.serv00.com"},
+                  {"username": "hnxczwwq", "password": "Hnxczww86", "panel": "panel8.serv00.com"},
+                  {"username": "hnxczww66", "password": "Hnxczww86", "panel": "panel8.serv00.com"}]' > accounts.json
 
       - name: 安装依赖
         run: |
           python -m pip install --upgrade pip
           pip install pyppeteer aiofiles requests
-          pip install --upgrade pyppeteer
 
-      - name: 处理每个账号
+      - name: 登录并执行安装脚本
         run: |
-          python -c "
-import json
-import subprocess
+          #!/bin/bash
 
-with open('accounts.json') as f:
-    accounts = json.load(f)
+          # Function to execute a script via curl
+          execute_script() {
+            local script_url=$1
+            curl -s "$script_url" | bash
+          }
 
-for account in accounts:
-    # 设置环境变量
-    account_env = {
-        'TELEGRAM_BOT_TOKEN': '${{ secrets.TELEGRAM_BOT_TOKEN }}',
-        'TELEGRAM_CHAT_ID': '${{ secrets.TELEGRAM_CHAT_ID }}',
-        'ACCOUNT_INFO': json.dumps(account)
-    }
+          # Read the accounts.json file and loop through each server
+          while IFS= read -r line; do
+            username=$(echo "$line" | jq -r '.username')
+            password=$(echo "$line" | jq -r '.password')
+            panel=$(echo "$line" | jq -r '.panel')
 
-    # 运行登录脚本
-    subprocess.run(['python', 'login_script.py'], env={**os.environ, **account_env})
-    
-    # 执行安装脚本
-    subprocess.run(['bash', '-c', 'bash <(curl -s https://raw.githubusercontent.com/ansoncloud8/am-serv00-socks5/main/install-socks5.sh)'])
-    subprocess.run(['bash', '-c', 'bash <(curl -s https://raw.githubusercontent.com/ansoncloud8/am-serv00-nezha/main/install-dashboard.sh)'])
-    subprocess.run(['bash', '-c', 'bash <(curl -s https://raw.githubusercontent.com/ansoncloud8/am-serv00-nezha/main/install-agent.sh)'])
-          "
-        env:
-          ACCOUNTS_JSON: ${{ secrets.ACCOUNTS_JSON }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+            # Simulate login process
+            echo "尝试登录: ${username}@${panel}"
+            response=$(curl -s -w "%{http_code}" -o /dev/null -X POST -d "username=${username}&password=${password}" "http://${panel}/login")
+            
+            if [ "$response" -eq 200 ]; then
+              echo "登录成功: ${username}@${panel}"
+              # Execute the installation scripts after successful login
+              execute_script "https://raw.githubusercontent.com/ansoncloud8/am-serv00-socks5/main/install-socks5.sh"
+              execute_script "https://raw.githubusercontent.com/ansoncloud8/am-serv00-nezha/main/install-dashboard.sh"
+              execute_script "https://raw.githubusercontent.com/ansoncloud8/am-serv00-nezha/main/install-agent.sh"
+            else
+              echo "登录失败: ${username}@${panel}"
+            fi
+          done < <(jq -c '.[]' accounts.json)
+
