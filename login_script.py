@@ -8,6 +8,7 @@ import aiofiles
 import random
 import requests
 import os
+import paramiko
 
 # 尝试安装 paramiko，如果已经安装则跳过
 def install_package(package):
