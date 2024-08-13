@@ -41,7 +41,7 @@ async def execute_command(command):
     print("")  # 输出一个空行作为回车
 
 async def run_install_scripts():
-    # 执行新添加的脚本
+    # 执行脚本
     await execute_command('./gaojilingjuli.sh')
     await delay_time(5000)  # 等待5秒
 
