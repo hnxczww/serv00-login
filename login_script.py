@@ -1,5 +1,6 @@
 import json
 import asyncio
+import paramiko
 from pyppeteer import launch
 from datetime import datetime, timedelta
 import aiofiles
@@ -66,6 +67,28 @@ async def login(username, password, panel):
         if page:
             await page.close()
 
+async def execute_remote_command(host, port, username, password, command):
+    try:
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(host, port=port, username=username, password=password)
+        
+        stdin, stdout, stderr = ssh.exec_command(command)
+        output = stdout.read().decode()
+        error = stderr.read().decode()
+        
+        if output:
+            print(f"Command Output:\n{output}")
+        if error:
+            print(f"Command Error:\n{error}")
+        
+        ssh.close()
+        return output, error
+
+    except Exception as e:
+        print(f"SSH 执行命令时出错: {e}")
+        return None, str(e)
+
 async def main():
     global message
     message = 'serv00&ct8自动化脚本运行\n'
@@ -82,6 +105,8 @@ async def main():
         username = account['username']
         password = account['password']
         panel = account['panel']
+        host = account.get('host', 'localhost')  # 获取主机地址
+        port = account.get('port', 22)  # 获取 SSH 端口，默认为 22
 
         serviceName = 'ct8' if 'ct8' in panel else 'serv00'
         is_logged_in = await login(username, password, panel)
@@ -92,6 +117,14 @@ async def main():
             success_message = f'{serviceName}账号 {username} 于北京时间 {now_beijing}（UTC时间 {now_utc}）登录成功！'
             message += success_message + '\n'
             print(success_message)
+
+            # 执行远程命令
+            command_output, command_error = await execute_remote_command(host, port, username, password, 'ls -all')
+            if command_output:
+                message += f'命令输出:\n{command_output}\n'
+            if command_error:
+                message += f'命令错误:\n{command_error}\n'
+
         else:
             message += f'{serviceName}账号 {username} 登录失败，请检查{serviceName}账号和密码是否正确。\n'
             print(f'{serviceName}账号 {username} 登录失败，请检查{serviceName}账号和密码是否正确。')
