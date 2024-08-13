@@ -29,6 +29,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install pyppeteer aiofiles requests
+          pip install paramiko
           pip install --upgrade pyppeteer
 
       - name: 运行登录脚本
