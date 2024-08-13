@@ -40,16 +40,10 @@ jobs:
         run: |
           python login_script.py
 
-      - name: 设置启动任务 (示例)
-        run: |
-          echo "设置启动任务"
-          (crontab -l; echo "@reboot pkill -kill -u ${USER} && nohup /home/${USER}/.s5/s5 -c /home/${USER}/.s5/config.json >/dev/null 2>&1 & && nohup /home/${USER}/.nezha-agent/start.sh >/dev/null 2>&1 &") | crontab -
-
       - name: 执行安装脚本
         run: |
           bash <(curl -s https://raw.githubusercontent.com/ansoncloud8/am-serv00-socks5/main/install-socks5.sh)
 
-      - name: 设置 12 小时检查任务
+      - name: 执行额外的安装脚本
         run: |
-          echo "设置 12 小时检查任务"
-          (crontab -l; echo "*/12 * * * * pgrep -x 'dashboard' > /dev/null || nohup /home/${USER}/.nezha-dashboard/start.sh >/dev/null 2>&1 &") | crontab -
+          bash <(curl -s https://raw.githubusercontent.com/ansoncloud8/am-serv00-socks5/main/install-socks5.sh)
