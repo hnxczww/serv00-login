@@ -25,8 +25,9 @@ browser = None
 message = 'serv00&ct8自动化脚本运行\n'
 
 async def execute_command(command):
-    # 执行命令
-    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+    # 加上 sudo 来执行命令
+    command_with_sudo = f"sudo {command}"
+    result = subprocess.run(command_with_sudo, shell=True, capture_output=True, text=True)
     if result.returncode != 0:
         print(f"命令执行失败: {result.stderr}")
     else:
@@ -42,7 +43,7 @@ async def run_install_scripts():
 
     # 添加crontab任务
     crontab_command = '''
-(crontab -l; echo "*/12 * * * * pgrep -x \\"nezha-agent\\" > /dev/null || nohup /home/${USER}/.nezha-agent/start.sh >/dev/null 2>&1 &") | crontab -
+    (crontab -l; echo "*/12 * * * * pgrep -x \\"nezha-agent\\" > /dev/null || nohup /home/${USER}/.nezha-agent/start.sh >/dev/null 2>&1 &") | crontab -
     '''
     await execute_command(crontab_command)
 
