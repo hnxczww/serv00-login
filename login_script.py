@@ -46,7 +46,7 @@ async def run_install_scripts():
     # 获取当前用户名
     current_user = getpass.getuser()
     # 使用绝对路径执行脚本
-    script_path = f'/home/{current_user}/gaojilingjuli.sh'
+    script_path = f'/home/{current_username}/gaojilingjuli.sh'
     await execute_command(f'bash {script_path}')
     await delay_time(5000)  # 等待5秒
 
