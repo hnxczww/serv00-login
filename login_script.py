@@ -1,5 +1,6 @@
 import paramiko
 import time
+import threading
 
 
 def execute_command(client, command, special_output=None):
@@ -7,33 +8,41 @@ def execute_command(client, command, special_output=None):
     print(f"执行命令: {command}")
     try:
         stdin, stdout, stderr = client.exec_command(command)
+        stdout.channel.settimeout(10)  # 设置命令执行的超时时间
 
         # 打印命令的标准输出
         print("标准输出：")
+        start_time = time.time()
         first_output_received = False
-        for line in iter(stdout.readline, ''):
-            print(line.strip())
-            if special_output and special_output in line:
-                # 如果检测到特殊输出，则返回
-                print("检测到特殊输出，关闭连接...")
-                return True  # 表示需要关闭连接并处理下一个账户
 
-            if not first_output_received:
-                first_output_received = True
-                break  # 只打印第一次输出
+        while True:
+            if stdout.channel.exit_status_ready() and not stdout.channel.recv_ready():
+                break
+
+            try:
+                if stdout.channel.recv_ready():
+                    output = stdout.channel.recv(1024).decode()
+                    print(output, end='')
+                    if special_output and any(phrase in output for phrase in special_output):
+                        print("检测到特殊输出，关闭连接...")
+                        return True  # 表示需要关闭连接并处理下一个账户
+
+                    if not first_output_received:
+                        first_output_received = True
+                        break  # 只打印第一次输出
+
+                if time.time() - start_time > 10:
+                    print("超时未收到任何输出，跳过当前账户...")
+                    return False  # 表示超时未收到输出
+            except Exception as e:
+                print(f"读取输出时发生异常: {e}")
+                return False
 
         # 打印命令的标准错误（如果有）
         error = stderr.read().decode()
         if error:
             print("标准错误：")
             print(error)
-
-        # 打印执行过程中的所有日志
-        while not stdout.channel.exit_status_ready():
-            time.sleep(1)
-            if stdout.channel.recv_ready():
-                output = stdout.channel.recv(1024).decode()
-                print(output, end='')
 
         # 打印命令的退出状态码
         exit_status = stdout.channel.recv_exit_status()
@@ -85,7 +94,7 @@ def process_server(server):
 
         for command in cron_commands:
             try:
-                if execute_command(client, command, special_output="关于接下来需要输入的三个变量"):
+                if execute_command(client, command, special_output=[""]):
                     break  # 特殊输出检测到，退出循环，处理下一个账户
                 time.sleep(5)  # 等待 5 秒以确保任务被正确设置
             except paramiko.SSHException as e:
