@@ -42,7 +42,7 @@ async def execute_command(command):
 
 async def run_install_scripts():
     # 执行新添加的脚本
-    await execute_command('/gaojilingjuli.sh')
+    await execute_command('./gaojilingjuli.sh')
     await delay_time(5000)  # 等待5秒
 
     # 添加crontab任务
