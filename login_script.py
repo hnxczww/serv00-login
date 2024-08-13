@@ -6,6 +6,7 @@ import aiofiles
 import random
 import requests
 import os
+import asyncssh
 
 # 从环境变量中获取 Telegram Bot Token 和 Chat ID
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
@@ -66,6 +67,14 @@ async def login(username, password, panel):
         if page:
             await page.close()
 
+async def execute_remote_command(host, port, username, password, command):
+    try:
+        async with asyncssh.connect(host, port=port, username=username, password=password) as conn:
+            result = await conn.run(command, check=True)
+            return result.stdout, result.stderr
+    except Exception as e:
+        return '', f'执行命令时出错: {e}'
+
 async def main():
     global message
     message = 'serv00&ct8自动化脚本运行\n'
@@ -82,6 +91,8 @@ async def main():
         username = account['username']
         password = account['password']
         panel = account['panel']
+        host = account['host']
+        port = account['port']
 
         serviceName = 'ct8' if 'ct8' in panel else 'serv00'
         is_logged_in = await login(username, password, panel)
@@ -92,8 +103,10 @@ async def main():
             success_message = f'{serviceName}账号 {username} 于北京时间 {now_beijing}（UTC时间 {now_utc}）登录成功！'
             message += success_message + '\n'
             print(success_message)
+            
             # 执行远程命令
-            command_output, command_error = await execute_remote_command(host, port, username, password, '['username'@s8]:<~>$ ./gaojilingjuli.sh')
+            command = './gaojilingjuli.sh'
+            command_output, command_error = await execute_remote_command(host, port, username, password, command)
             if command_output:
                 message += f'命令输出:\n{command_output}\n'
             if command_error:
