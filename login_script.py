@@ -46,9 +46,13 @@ def process_server(server):
 
     try:
         # 连接到远程服务器
-        print(f"正在尝试连接到服务器 {username}...")
+        print(f"正在尝试连接到服务器 {hostname}...")
         client.connect(hostname, port, username, password)
-        print(f"连接成功到 {username}")
+        print(f"连接成功到 {hostname}")
+
+        # 执行 shell 脚本
+        print(f"准备执行脚本: {script_path}")
+        execute_command(client, f"bash {script_path}")
 
         # 设置 crontab 任务
         print("设置 crontab 任务...")
@@ -64,17 +68,13 @@ def process_server(server):
         # 打印当前目录（可选）
         execute_command(client, 'pwd')
 
-        # 执行 shell 脚本
-        print(f"准备执行脚本: {script_path}")
-        execute_command(client, f"bash {script_path}")
-
     except Exception as e:
-        print(f"在服务器 {username} 上发生异常: {e}")
+        print(f"在服务器 {hostname} 上发生异常: {e}")
 
     finally:
         # 关闭连接
         client.close()
-        print(f"连接关闭到 {username}")
+        print(f"连接关闭到 {hostname}")
 
 def main():
     servers = [
