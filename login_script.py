@@ -13,6 +13,7 @@ try:
 except ImportError:
     print("未安装 asyncssh，正在安装...")
     install('asyncssh')
+    import asyncssh  # 安装后重新导入模块
 
 async def execute_command(client, command):
     """执行命令并打印返回数据"""
