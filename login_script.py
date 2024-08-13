@@ -3,16 +3,21 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 
 
-def execute_command(client, command):
+def execute_command(client, command, timeout=None):
     """执行命令并打印返回数据"""
     print(f"执行命令: {command}")
     try:
         stdin, stdout, stderr = client.exec_command(command)
 
+        if timeout:
+            start_time = time.time()
+
         # 打印命令的标准输出
         print("标准输出：")
         for line in iter(stdout.readline, ''):
             print(line.strip())
+            if timeout and time.time() - start_time > timeout:
+                break
 
         # 打印命令的标准错误（如果有）
         error = stderr.read().decode()
@@ -22,6 +27,8 @@ def execute_command(client, command):
 
         # 打印执行过程中的所有日志
         while not stdout.channel.exit_status_ready():
+            if timeout and time.time() - start_time > timeout:
+                break
             time.sleep(1)
             if stdout.channel.recv_ready():
                 output = stdout.channel.recv(1024).decode()
@@ -75,14 +82,19 @@ def process_server(server):
         ]
 
         for command in cron_commands:
-            try:
-                execute_command(client, command)
-                time.sleep(5)  # 等待 5 秒以确保任务被正确设置
-            except paramiko.SSHException as e:
-                print(f"执行命令时发生 SSH 异常: {e}")
-                client.close()
-                connect_client()  # 重新连接并重试
-                execute_command(client, command)
+            if command.startswith('bash <'):
+                # 特殊处理的 crontab 任务
+                print("特殊处理的 crontab 任务...")
+                execute_command(client, command, timeout=15)
+            else:
+                try:
+                    execute_command(client, command)
+                    time.sleep(1)  # 等待 5 秒以确保任务被正确设置
+                except paramiko.SSHException as e:
+                    print(f"执行命令时发生 SSH 异常: {e}")
+                    client.close()
+                    connect_client()  # 重新连接并重试
+                    execute_command(client, command)
 
         # 打印当前目录（可选）
         execute_command(client, 'pwd')
