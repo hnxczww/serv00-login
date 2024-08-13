@@ -6,11 +6,17 @@ import aiofiles
 import random
 import requests
 import os
-import asyncssh
+import paramiko
 
 # 从环境变量中获取 Telegram Bot Token 和 Chat ID
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
+
+# SSH 配置信息
+SSH_HOST = os.getenv('SSH_HOST')
+SSH_PORT = int(os.getenv('SSH_PORT', 22))
+SSH_USERNAME = os.getenv('SSH_USERNAME')
+SSH_PASSWORD = os.getenv('SSH_PASSWORD')
 
 def format_to_iso(date):
     return date.strftime('%Y-%m-%d %H:%M:%S')
@@ -67,13 +73,21 @@ async def login(username, password, panel):
         if page:
             await page.close()
 
-async def execute_remote_command(host, port, username, password, command):
+async def execute_remote_command(command):
     try:
-        async with asyncssh.connect(host, port=port, username=username, password=password) as conn:
-            result = await conn.run(command, check=True)
-            return result.stdout, result.stderr
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(SSH_HOST, port=SSH_PORT, username=SSH_USERNAME, password=SSH_PASSWORD)
+        
+        stdin, stdout, stderr = ssh.exec_command(command)
+        output = stdout.read().decode()
+        error = stderr.read().decode()
+        ssh.close()
+
+        return output, error
+
     except Exception as e:
-        return '', f'执行命令时出错: {e}'
+        return None, str(e)
 
 async def main():
     global message
@@ -91,8 +105,6 @@ async def main():
         username = account['username']
         password = account['password']
         panel = account['panel']
-        host = account['host']
-        port = account['port']
 
         serviceName = 'ct8' if 'ct8' in panel else 'serv00'
         is_logged_in = await login(username, password, panel)
@@ -105,12 +117,14 @@ async def main():
             print(success_message)
             
             # 执行远程命令
-            command = './gaojilingjuli.sh'
-            command_output, command_error = await execute_remote_command(host, port, username, password, command)
+            command_output, command_error = await execute_remote_command('ls -all')
             if command_output:
-                message += f'命令输出:\n{command_output}\n'
+                message += f'{serviceName}账号 {username} 执行命令输出: {command_output}\n'
+                print(f'{serviceName}账号 {username} 执行命令输出: {command_output}')
             if command_error:
-                message += f'命令错误:\n{command_error}\n'
+                message += f'{serviceName}账号 {username} 执行命令错误: {command_error}\n'
+                print(f'{serviceName}账号 {username} 执行命令错误: {command_error}')
+
         else:
             message += f'{serviceName}账号 {username} 登录失败，请检查{serviceName}账号和密码是否正确。\n'
             print(f'{serviceName}账号 {username} 登录失败，请检查{serviceName}账号和密码是否正确。')
