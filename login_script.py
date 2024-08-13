@@ -6,7 +6,6 @@ import aiofiles
 import random
 import requests
 import os
-import paramiko  # 新增的库
 
 # 从环境变量中获取 Telegram Bot Token 和 Chat ID
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
@@ -67,27 +66,6 @@ async def login(username, password, panel):
         if page:
             await page.close()
 
-async def execute_remote_command(host, port, username, password, command):
-    """ 使用 paramiko 执行远程命令并打印结果 """
-    try:
-        ssh_client = paramiko.SSHClient()
-        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh_client.connect(host, port=port, username=username, password=password)
-
-        stdin, stdout, stderr = ssh_client.exec_command(command)
-        result = stdout.read().decode()
-        error = stderr.read().decode()
-
-        if result:
-            print(f"命令输出:\n{result}")
-        if error:
-            print(f"命令错误:\n{error}")
-
-        ssh_client.close()
-
-    except Exception as e:
-        print(f"执行远程命令时出错: {e}")
-
 async def main():
     global message
     message = 'serv00&ct8自动化脚本运行\n'
@@ -104,8 +82,6 @@ async def main():
         username = account['username']
         password = account['password']
         panel = account['panel']
-        host = account['host']  # 假设你在 JSON 文件中也提供了主机地址
-        port = account.get('port', 22)  # 默认使用 22 端口
 
         serviceName = 'ct8' if 'ct8' in panel else 'serv00'
         is_logged_in = await login(username, password, panel)
@@ -116,10 +92,6 @@ async def main():
             success_message = f'{serviceName}账号 {username} 于北京时间 {now_beijing}（UTC时间 {now_utc}）登录成功！'
             message += success_message + '\n'
             print(success_message)
-
-            # 执行远程命令
-            await execute_remote_command(host, port, username, password, 'ls -all')
-            
         else:
             message += f'{serviceName}账号 {username} 登录失败，请检查{serviceName}账号和密码是否正确。\n'
             print(f'{serviceName}账号 {username} 登录失败，请检查{serviceName}账号和密码是否正确。')
