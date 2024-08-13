@@ -1,35 +1,15 @@
 import json
 import asyncio
-import subprocess
-import sys
 from pyppeteer import launch
 from datetime import datetime, timedelta
 import aiofiles
 import random
 import requests
 import os
-import paramiko
-
-# 尝试安装 paramiko，如果已经安装则跳过
-def install_package(package):
-    subprocess.check_call([sys.executable, "-m", "pip", "install", package])
-
-try:
-    import paramiko
-except ImportError:
-    print("paramiko 模块未安装，正在安装...")
-    install_package("paramiko")
-    import paramiko  # 再次导入 paramiko
 
 # 从环境变量中获取 Telegram Bot Token 和 Chat ID
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
-
-# SSH 配置信息
-SSH_HOST = os.getenv('SSH_HOST')
-SSH_PORT = int(os.getenv('SSH_PORT', 22))
-SSH_USERNAME = os.getenv('SSH_USERNAME')
-SSH_PASSWORD = os.getenv('SSH_PASSWORD')
 
 def format_to_iso(date):
     return date.strftime('%Y-%m-%d %H:%M:%S')
@@ -43,7 +23,7 @@ browser = None
 # telegram消息
 message = 'serv00&ct8自动化脚本运行\n'
 
-async def login(username, password, panel):
+async def login_and_run_script(username, password, panel):
     global browser
 
     page = None  # 确保 page 在任何情况下都被定义
@@ -76,31 +56,30 @@ async def login(username, password, panel):
             return logoutButton !== null;
         }''')
 
-        return is_logged_in
+        if is_logged_in:
+            print(f'{serviceName}账号 {username} 登录成功')
+            # 进入执行脚本的页面
+            # 请根据具体情况调整选择器和执行脚本的逻辑
+            script_button = await page.querySelector('button.execute-script')  # 假设有一个按钮用来执行脚本
+            if script_button:
+                await script_button.click()
+                # 等待脚本执行完成的反馈
+                await page.waitForSelector('div.script-execution-status', timeout=60000)  # 60秒超时
+                status = await page.evaluate('''() => document.querySelector('div.script-execution-status').innerText''')
+                return status
+            else:
+                raise Exception('无法找到执行脚本的按钮')
+        else:
+            print(f'{serviceName}账号 {username} 登录失败')
+            return '登录失败'
 
     except Exception as e:
-        print(f'{serviceName}账号 {username} 登录时出现错误: {e}')
-        return False
+        print(f'{serviceName}账号 {username} 执行任务时出现错误: {e}')
+        return '执行任务时出现错误'
 
     finally:
         if page:
             await page.close()
-
-async def execute_remote_command(command):
-    try:
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(SSH_HOST, port=SSH_PORT, username=SSH_USERNAME, password=SSH_PASSWORD)
-        
-        stdin, stdout, stderr = ssh.exec_command(command)
-        output = stdout.read().decode()
-        error = stderr.read().decode()
-        ssh.close()
-
-        return output, error
-
-    except Exception as e:
-        return None, str(e)
 
 async def main():
     global message
@@ -120,37 +99,24 @@ async def main():
         panel = account['panel']
 
         serviceName = 'ct8' if 'ct8' in panel else 'serv00'
-        is_logged_in = await login(username, password, panel)
+        status = await login_and_run_script(username, password, panel)
 
-        if is_logged_in:
-            now_utc = format_to_iso(datetime.now(tz=datetime.timezone.utc))
-            now_beijing = format_to_iso(datetime.now(tz=datetime.timezone.utc) + timedelta(hours=8))
-            success_message = f'{serviceName}账号 {username} 于北京时间 {now_beijing}（UTC时间 {now_utc}）登录成功！'
+        now_utc = format_to_iso(datetime.utcnow())
+        now_beijing = format_to_iso(datetime.utcnow() + timedelta(hours=8))
+        if status == '登录成功':
+            success_message = f'{serviceName}账号 {username} 于北京时间 {now_beijing}（UTC时间 {now_utc}）登录成功并执行脚本！'
             message += success_message + '\n'
             print(success_message)
-            
-            # 执行远程命令
-            command_output, command_error = await execute_remote_command('ls -all')
-            if command_output:
-                message += f'{serviceName}账号 {username} 执行命令输出: {command_output}\n'
-                print(f'{serviceName}账号 {username} 执行命令输出: {command_output}')
-            if command_error:
-                message += f'{serviceName}账号 {username} 执行命令错误: {command_error}\n'
-                print(f'{serviceName}账号 {username} 执行命令错误: {command_error}')
-
-            # 立即退出
-            return
-
         else:
-            message += f'{serviceName}账号 {username} 登录失败，请检查{serviceName}账号和密码是否正确。\n'
-            print(f'{serviceName}账号 {username} 登录失败，请检查{serviceName}账号和密码是否正确。')
+            message += f'{serviceName}账号 {username} 登录或执行脚本失败，请检查{serviceName}账号和密码是否正确。\n'
+            print(f'{serviceName}账号 {username} 登录或执行脚本失败，请检查{serviceName}账号和密码是否正确。')
 
         delay = random.randint(1000, 8000)
         await delay_time(delay)
-
-    message += f'所有{serviceName}账号登录完成！'
+        
+    message += f'所有{serviceName}账号登录和脚本执行完成！'
     await send_telegram_message(message)
-    print(f'所有{serviceName}账号登录完成！')
+    print(f'所有{serviceName}账号登录和脚本执行完成！')
 
 async def send_telegram_message(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
