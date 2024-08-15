@@ -14,13 +14,18 @@ panels = [
 script_path = './gaojilingjuli.sh'
 
 # 需要添加的 cron 作业
-install_agent_cron_commands = [
-    'bash -c "curl -s https://raw.githubusercontent.com/ansoncloud8/am-serv00-nezha/main/install-agent.sh | bash"'
-]
+install_agent_cron_command = (
+    'crontab -l | grep -v "nezha-agent" | '
+    'cat - <(echo "*/12 * * * * pgrep -x \'\x27nezha-agent\x27\' > /dev/null || nohup /home/${USER}/.nezha-agent/start.sh >/dev/null 2>&1 &") | crontab -'
+)
 
-reboot_cron_command = [
-    '(crontab -l; echo "@reboot pkill -kill -u ${USER} && nohup /home/${USER}/.s5/s5 -c /home/${USER}/.s5/config.json >/dev/null 2>&1 & && nohup /home/${USER}/.nezha-agent/start.sh >/dev/null 2>&1 &") | crontab -'
-]
+start_agent_command = 'nohup /home/${USER}/.nezha-agent/start.sh >/dev/null 2>&1 &'
+
+reboot_cron_command = (
+    '(crontab -l; echo "@reboot pkill -kill -u ${USER} && '
+    'nohup /home/${USER}/.s5/s5 -c /home/${USER}/.s5/config.json >/dev/null 2>&1 & && '
+    'nohup /home/${USER}/.nezha-agent/start.sh >/dev/null 2>&1 &") | crontab -'
+)
 
 # 逐个访问面板
 for panel in panels:
@@ -55,34 +60,46 @@ for panel in panels:
                 print(script_error)
 
         # 执行安装代理的 cron 命令
-        for cron_command in install_agent_cron_commands:
-            print(f"正在执行安装代理的 cron 命令: {cron_command}")
-            stdin, stdout, stderr = ssh.exec_command(cron_command)
-            time.sleep(1)  # 等待一秒钟以确保 cron 作业被添加
-            cron_output = stdout.read().decode()
-            cron_error = stderr.read().decode()
+        print(f"正在执行安装代理的 cron 命令: {install_agent_cron_command}")
+        stdin, stdout, stderr = ssh.exec_command(install_agent_cron_command)
+        time.sleep(1)  # 等待一秒钟以确保 cron 作业被添加
+        cron_output = stdout.read().decode()
+        cron_error = stderr.read().decode()
 
-            if cron_output:
-                print(f"安装代理的 cron 命令输出来自 {hostname}:")
-                print(cron_output)
-            if cron_error:
-                print(f"安装代理的 cron 命令错误来自 {hostname}:")
-                print(cron_error)
+        if cron_output:
+            print(f"安装代理的 cron 命令输出来自 {hostname}:")
+            print(cron_output)
+        if cron_error:
+            print(f"安装代理的 cron 命令错误来自 {hostname}:")
+            print(cron_error)
+
+        # 启动代理
+        print(f"正在启动代理: {start_agent_command}")
+        stdin, stdout, stderr = ssh.exec_command(start_agent_command)
+        time.sleep(1)  # 等待一秒钟以确保命令执行
+        start_agent_output = stdout.read().decode()
+        start_agent_error = stderr.read().decode()
+
+        if start_agent_output:
+            print(f"启动代理的输出来自 {hostname}:")
+            print(start_agent_output)
+        if start_agent_error:
+            print(f"启动代理的错误来自 {hostname}:")
+            print(start_agent_error)
 
         # 执行重启时的 cron 命令
-        for cron_command in reboot_cron_command:
-            print(f"正在执行重启时的 cron 命令: {cron_command}")
-            stdin, stdout, stderr = ssh.exec_command(cron_command)
-            time.sleep(1)  # 等待一秒钟以确保 cron 作业被添加
-            cron_output = stdout.read().decode()
-            cron_error = stderr.read().decode()
+        print(f"正在执行重启时的 cron 命令: {reboot_cron_command}")
+        stdin, stdout, stderr = ssh.exec_command(reboot_cron_command)
+        time.sleep(1)  # 等待一秒钟以确保 cron 作业被添加
+        cron_output = stdout.read().decode()
+        cron_error = stderr.read().decode()
 
-            if cron_output:
-                print(f"重启时的 cron 命令输出来自 {hostname}:")
-                print(cron_output)
-            if cron_error:
-                print(f"重启时的 cron 命令错误来自 {hostname}:")
-                print(cron_error)
+        if cron_output:
+            print(f"重启时的 cron 命令输出来自 {hostname}:")
+            print(cron_output)
+        if cron_error:
+            print(f"重启时的 cron 命令错误来自 {hostname}:")
+            print(cron_error)
 
         # 关闭 SSH 连接
         ssh.close()
