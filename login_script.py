@@ -5,7 +5,6 @@ import time
 panels = [
     {"username": "hnxpzjww", "password": "Hnxczww86", "panel": "panel8.serv00.com"},
     {"username": "hnxczjww", "password": "Hnxczww86", "panel": "panel8.serv00.com"},
-    {"username": "WFA77", "password": "Hnxczww86", "panel": "panel8.serv00.com"},
     {"username": "hnxczwwq", "password": "Hnxczww86", "panel": "panel8.serv00.com"},
     {"username": "hnxczww66", "password": "Hnxczww86", "panel": "panel8.serv00.com"}
 ]
