@@ -21,9 +21,11 @@ install_agent_cron_command = (
 
 start_agent_command = 'nohup /home/${USER}/.nezha-agent/start.sh >/dev/null 2>&1 &'
 
-dashboard_command = 'nohup /home/${USER}/.nezha-dashboard/start.sh >/dev/null 2>&1 &'
-
-reboot_cron_command = 'nohup /home/${USER}/.s5/s5 -c /home/${USER}/.s5/config.json >/dev/null 2>&1 &'
+reboot_cron_command = (
+    '(crontab -l; echo "@reboot pkill -kill -u ${USER} && '
+    'nohup /home/${USER}/.s5/s5 -c /home/${USER}/.s5/config.json >/dev/null 2>&1 & && '
+    'nohup /home/${USER}/.nezha-agent/start.sh >/dev/null 2>&1 &") | crontab -'
+)
 
 # 逐个访问面板
 for panel in panels:
@@ -84,20 +86,6 @@ for panel in panels:
         if start_agent_error:
             print(f"启动代理的错误来自 {hostname}:")
             print(start_agent_error)
-
-        # 启动 dashboard
-        print(f"正在启动 Nezha dashboard: {dashboard_command}")
-        stdin, stdout, stderr = ssh.exec_command(dashboard_command)
-        time.sleep(1)  # 等待一秒钟以确保命令执行
-        dashboard_output = stdout.read().decode()
-        dashboard_error = stderr.read().decode()
-
-        if dashboard_output:
-            print(f"启动 Nezha dashboard 的输出来自 {hostname}:")
-            print(dashboard_output)
-        if dashboard_error:
-            print(f"启动 Nezha dashboard 的错误来自 {hostname}:")
-            print(dashboard_error)
 
         # 执行重启时的 cron 命令
         print(f"正在执行重启时的 cron 命令: {reboot_cron_command}")
