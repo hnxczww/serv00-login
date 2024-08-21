@@ -19,11 +19,12 @@ install_agent_cron_command = (
     'cat - <(echo "*/12 * * * * pgrep -x \'\x27nezha-agent\x27\' > /dev/null || nohup /home/${USER}/.nezha-agent/start.sh >/dev/null 2>&1 &") | crontab -'
 )
 
-start_agent_command = 'nohup /home/${USER}/.nezha-agent/start.sh >/dev/null 2>&1 &'
+start_agent_command = 'nohup /home/${USER}/.nezha-agent/start.sh &'
+#start_agent_command = 'nohup /home/${USER}/.nezha-agent/start.sh >/dev/null 2>&1 &'
 
-dashboard_command = 'nohup /home/${USER}/.nezha-dashboard/start.sh >/dev/null 2>&1'
+dashboard_command = 'nohup /home/${USER}/.nezha-dashboard/start.sh &'
 
-reboot_cron_command = 'nohup /home/${USER}/.s5/s5 -c /home/${USER}/.s5/config.json >/dev/null 2>&1'
+reboot_cron_command = 'nohup /home/${USER}/.s5/s5 -c /home/${USER}/.s5/config.json >/dev/null 2>&1 &'
 
 # 逐个访问面板
 for panel in panels:
