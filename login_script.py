@@ -11,7 +11,9 @@ panels = [
     {"username": "AWAD", "password": "Hnxczww86", "panel": "panel9.serv00.com"},
     {"username": "PAP19", "password": "Hnxczww86", "panel": "panel9.serv00.com"},
     {"username": "WKKAZZ", "password": "Hnxczww86", "panel": "panel9.serv00.com"},
-    {"username": "ZKWK123", "password": "Hnxczww86", "panel": "panel9.serv00.com"}
+    {"username": "ZKWK123", "password": "Hnxczww86", "panel": "panel9.serv00.com"},
+    {"username": "Lonwm", "password": "Hnxczww86", "panel": "panel10.serv00.com"},
+    {"username": "awtku", "password": "Hnxczww86", "panel": "panel10.serv00.com"}
 ]
 
 # 需要执行的脚本
