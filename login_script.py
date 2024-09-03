@@ -26,11 +26,20 @@ install_agent_cron_command = (
 )
 
 start_agent_command = 'nohup /home/${USER}/.nezha-agent/start.sh &'
-#start_agent_command = 'nohup /home/${USER}/.nezha-agent/start.sh >/dev/null 2>&1 &'
 
 dashboard_command = 'nohup /home/${USER}/.nezha-dashboard/start.sh &'
 
 reboot_cron_command = 'nohup /home/${USER}/.s5/s5 -c /home/${USER}/.s5/config.json >/dev/null 2>&1 &'
+
+# 任务函数，用于执行 pkill 命令
+def kill_s5_process(ssh):
+    stdin, stdout, stderr = ssh.exec_command('pkill -9 -f s5')
+    time.sleep(1)  # 等待命令执行
+    output, error = stdout.read().decode(), stderr.read().decode()
+
+    if output or error:
+        print(f"kill s5 process 输出来自 {hostname}: {output}\n错误: {error}")
+
 
 # 逐个访问面板
 for panel in panels:
@@ -63,6 +72,10 @@ for panel in panels:
             if script_error:
                 print(f"脚本执行错误来自 {hostname}:")
                 print(script_error)
+
+            # 执行任务函数
+            print(f"正在执行 kill s5 任务")
+            kill_s5_process(ssh)
 
         # 执行安装代理的 cron 命令
         print(f"正在执行安装代理的 cron 命令: {install_agent_cron_command}")
